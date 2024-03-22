@@ -11,7 +11,7 @@ import { Checkbox } from "../ui/checkbox"
 import { UploadButton } from "../uploadthing"
 import { useToast } from "../ui/use-toast"
 import Image from "next/image"
-import { Loader2, Pencil, PencilLine, Trash, XCircle } from "lucide-react"
+import { Eye, Loader2, Pencil, PencilLine, Plus, Terminal, Trash, XCircle } from "lucide-react"
 import { Button } from "../ui/button"
 import axios from 'axios'
 import useLocation from "@/hooks/useLocation"
@@ -25,6 +25,22 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useRouter } from "next/navigation"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import AddRoomForm from "../room/AddRoomForm"
+import RoomCard from "../room/RoomCard"
+import { Separator } from "../ui/separator"
 
 interface AddHotelFormProps {
   hotel: HotelWithRooms | null;
@@ -73,6 +89,7 @@ const AddHotelForm = ({ hotel }: AddHotelFormProps) => {
   const [cities, setCities] = useState<ICity[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isHotelDeleting, setIsHotelDeleting] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const { toast } = useToast();
   const router = useRouter();
@@ -133,6 +150,7 @@ const AddHotelForm = ({ hotel }: AddHotelFormProps) => {
   }, [form.watch('country'), form.watch('state')]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log(values);
     setIsLoading(true);
     if(hotel){
       axios.patch(`/api/hotel/${hotel.id}`, values)
@@ -192,7 +210,7 @@ const AddHotelForm = ({ hotel }: AddHotelFormProps) => {
       console.log(error)
       setIsHotelDeleting(false);
       toast({
-        variant: 'success',
+        variant: 'destructive',
         description: `Hotel deletion could not be completed! ${error.message}`
       })
     }
@@ -217,6 +235,10 @@ const AddHotelForm = ({ hotel }: AddHotelFormProps) => {
     }).finally(()=> {
       setImageIsDeleting(false);
     })
+  }
+
+  const handleDalogueOpen = () =>{
+    setOpen(prev => !prev)
   }
   return (
     <div>
@@ -602,6 +624,17 @@ const AddHotelForm = ({ hotel }: AddHotelFormProps) => {
               )}
             />
 
+            {hotel && !hotel.rooms.length && 
+              <Alert className="bg-indigo-600 text-white">
+                <Terminal className="h-4 w-4 stroke-white"/>
+                <AlertTitle>One last step!</AlertTitle>
+                <AlertDescription>
+                  Your hotel was created successfuly.
+                  <div>Please add some rooms to complete your hotel setup!</div>
+                </AlertDescription>
+              </Alert>
+            }
+
             <div className="flex justify-between gap-2 flex-wrap">
               {hotel && 
                 <Button onClick={()=> handleDeleteHotel(hotel)} variant='ghost' type="button" className="max-w-[150px]" disabled={isHotelDeleting || isLoading}>
@@ -612,18 +645,47 @@ const AddHotelForm = ({ hotel }: AddHotelFormProps) => {
                 </Button>
               }
 
+              {hotel && <Button onClick={()=>router.push(`/hotel-details/${hotel.id}`)} variant="outline" type="button"><Eye className="mr-2 h-4 w-4"/>View</Button>}
 
+              {hotel && 
+                <Dialog open={open} onOpenChange={setOpen}>
+                  <DialogTrigger>
+                    <Button type="button" variant='outline' className="max-w-[150px]">
+                      <Plus className="mr-2 h-4 w-4"/> Add Room
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-[900px] w-[90%]">
+                    <DialogHeader>
+                      <DialogTitle>Add a Room</DialogTitle>
+                      <DialogDescription>
+                        Add details about a room in your hotel.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <AddRoomForm hotel={hotel} handleDalogueOpen={handleDalogueOpen}/>
+                  </DialogContent>
+                </Dialog>
+              }
+              
               {hotel ? 
                 <Button className="max-w-[150px]" disabled={isLoading}>
                   {isLoading ? <><Loader2 className="mr-2 h-4 w-4"/>Updating</> : <><PencilLine className="mr-2 h-4 w-4"/> Update</>}
                 </Button> 
               : 
-              <>
+              
                 <Button className="max-w-[150px]" disabled={isLoading}>
                   {isLoading ? <><Loader2 className="mr-2 h-4 w-4"/> Creating</> : <><Pencil className="mr-2 h-4 w-4"/> Create Hotel</>}
                 </Button>
-              </>}
+              }
             </div>
+            {hotel && !!hotel.rooms.length && <div>
+                <Separator/>
+                <h3 className="text-lg font-semibold my-4">Hotel Rooms</h3>
+                <div className="grid grid-cols-1 2xl:grid-cols-2 gap-6">
+                  {hotel.rooms.map(room =>{
+                    return <RoomCard key={room.id} hotel={hotel} room={room}/>
+                  })}
+                </div>
+              </div>}
           </div>
         </div>
        </form>
